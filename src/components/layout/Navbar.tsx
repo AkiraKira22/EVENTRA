@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
-  CalendarDays,
   LayoutDashboard,
   LogOut,
-  Plus,
   Sparkles,
   User as UserIcon,
 } from "lucide-react";
@@ -25,39 +24,52 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { RoleBadge } from "@/components/shared/RoleBadge";
+import { MobileNav } from "@/components/layout/MobileNav";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { getInitials } from "@/lib/utils";
+import { getInitials, cn } from "@/lib/utils";
+import { primaryNav, dashboardLink, visibleNav, activeHref } from "@/lib/nav";
 
 export function Navbar() {
-  const { user, isAuthenticated, isLoading, canCreateEvents } = useCurrentUser();
+  const pathname = usePathname();
+  const { user, isAuthenticated, isLoading, role } = useCurrentUser();
+
+  const links = visibleNav(primaryNav, role);
+  if (isAuthenticated) links.push(dashboardLink);
+  const active = activeHref(pathname, links.map((l) => l.href));
 
   return (
     <header className="sticky top-0 z-40 glass">
       <div className="container flex h-16 items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
-            <Sparkles className="h-5 w-5" />
-          </span>
-          <span className="text-lg font-bold tracking-tight">
-            Event<span className="text-gradient">ra</span>
-          </span>
-        </Link>
+        <div className="flex items-center gap-1">
+          <MobileNav />
+          <Link href="/" className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <span className="text-lg font-bold tracking-tight">
+              Event<span className="text-gradient">ra</span>
+            </span>
+          </Link>
+        </div>
 
         <nav className="hidden items-center gap-1 md:flex">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/events">
-              <CalendarDays className="h-4 w-4" />
-              Browse Events
-            </Link>
-          </Button>
-          {canCreateEvents && (
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/events/new">
-                <Plus className="h-4 w-4" />
-                Create Event
+          {links.map(({ href, label, icon: Icon }) => (
+            <Button
+              key={href}
+              variant="ghost"
+              size="sm"
+              asChild
+              className={cn(
+                active === href &&
+                  "bg-primary/15 text-primary hover:bg-primary/15 hover:text-primary"
+              )}
+            >
+              <Link href={href}>
+                <Icon className="h-4 w-4" />
+                {label}
               </Link>
             </Button>
-          )}
+          ))}
         </nav>
 
         <div className="flex items-center gap-2">

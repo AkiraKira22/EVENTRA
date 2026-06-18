@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
-  ArrowLeft,
   CalendarDays,
   Clock,
   ExternalLink,
@@ -11,6 +10,7 @@ import {
 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -66,13 +66,14 @@ export default async function EventDetailPage({
         </div>
 
         <div className="container -mt-16 pb-20">
-          <Link
-            href="/events"
-            className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to events
-          </Link>
+          <Breadcrumbs
+            className="mb-6"
+            items={[
+              { label: "Home", href: "/" },
+              { label: "Events", href: "/events" },
+              { label: event.title },
+            ]}
+          />
 
           <div className="grid gap-8 lg:grid-cols-3">
             {/* Main content */}

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { EventForm } from "@/components/events/EventForm";
 import { getEventById } from "@/lib/events-data";
 import { getSession } from "@/lib/auth";
@@ -30,6 +31,15 @@ export default async function EditEventPage({
       <Navbar />
       <main className="container flex-1 py-10">
         <div className="mx-auto max-w-2xl">
+          <Breadcrumbs
+            className="mb-6"
+            items={[
+              { label: "Home", href: "/" },
+              { label: "Events", href: "/events" },
+              { label: event.title, href: `/events/${params.eventId}` },
+              { label: "Edit" },
+            ]}
+          />
           <div className="mb-8">
             <h1 className="text-3xl font-bold tracking-tight">Edit Event</h1>
             <p className="mt-1 text-muted-foreground">
