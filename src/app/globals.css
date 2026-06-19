@@ -52,6 +52,12 @@
 @layer base {
   * {
     @apply border-border;
+    /* Hide scrollbars across the whole app while keeping scroll behavior. */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* legacy Edge / IE */
+  }
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, modern Edge */
   }
   body {
     @apply bg-background text-foreground;
@@ -73,15 +79,6 @@
   /* Cahaya halus di belakang elemen hero */
   .glow {
     box-shadow: 0 0 80px -20px hsl(var(--primary) / 0.45);
-  }
-
-  /* Scrollbar tipis */
-  .thin-scrollbar::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  .thin-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full;
   }
 }
 

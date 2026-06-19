@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -37,8 +38,43 @@ export function Navbar() {
   if (isAuthenticated) links.push(dashboardLink);
   const active = activeHref(pathname, links.map((l) => l.href));
 
+  // On the home page, go from glass to solid once the full-screen top section
+  // (the hero) has scrolled out of view. Other pages keep the glass header.
+  const isHome = pathname === "/";
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    if (!isHome) {
+      setScrolled(false);
+      return;
+    }
+    let raf = 0;
+    const update = () => {
+      setScrolled(window.scrollY > window.innerHeight - 80);
+    };
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [isHome]);
+
+  const solid = isHome && scrolled;
+
   return (
-    <header className="sticky top-0 z-40 glass">
+    <header
+      className={cn(
+        "sticky top-0 z-40 border-b border-border/60 backdrop-blur-xl transition-colors duration-300",
+        solid ? "bg-background shadow-sm" : "bg-background/70"
+      )}
+    >
       <div className="container flex h-16 items-center justify-between gap-4">
         <div className="flex items-center gap-1">
           <MobileNav />
