@@ -36,7 +36,7 @@ export function MyEventsList() {
   const { data: events, isLoading } = useQuery({
     queryKey: ["events", { mine: true }],
     queryFn: () =>
-      apiGet<{ events: EventDTO[] }>("/api/events?mine=true&scope=all"),
+      apiGet<{ events: EventDTO[] }>("/api/events?mine=true&scope=all&limit=50"),
     select: (d) => d.events,
   });
 
@@ -103,7 +103,13 @@ export function MyEventsList() {
                 </div>
               </div>
 
-              <div className="flex shrink-0 gap-2">
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/events/${event.id}/manage`}>
+                    <Users className="h-4 w-4" />
+                    Manage
+                  </Link>
+                </Button>
                 <Button variant="outline" size="sm" asChild>
                   <Link href={`/events/${event.id}/edit`}>
                     <Pencil className="h-4 w-4" />

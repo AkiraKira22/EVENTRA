@@ -7,6 +7,8 @@ import { eventSchema } from "@/lib/validations";
 import { requireRole, getSession } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-error";
 import { serializeEvent } from "@/lib/serialize";
+import { assertSameOrigin, parsePagination, paginationMeta } from "@/lib/http";
+import { sanitizeText, sanitizeMultiline } from "@/lib/sanitize";
 import type { RegistrationStatus } from "@/types";
 
 // GET /api/events — daftar acara (publik), dengan filter & pencarian.
@@ -51,11 +53,20 @@ export async function GET(request: Request) {
     if (scope === "upcoming") query.date = { $gte: new Date() };
     else if (scope === "past") query.date = { $lt: new Date() };
 
-    const events = await Event.find(query)
-      .populate("organizer", "name image")
-      .sort({ date: scope === "past" ? -1 : 1 })
-      .limit(100)
-      .lean<(IEvent & { organizer: unknown })[]>();
+    const { page, limit, skip } = parsePagination(searchParams, {
+      defaultLimit: 12,
+      maxLimit: 50,
+    });
+
+    const [events, total] = await Promise.all([
+      Event.find(query)
+        .populate("organizer", "name image")
+        .sort({ date: scope === "past" ? -1 : 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean<(IEvent & { organizer: unknown })[]>(),
+      Event.countDocuments(query),
+    ]);
 
     // Jika user login, tandai status pendaftarannya untuk tiap acara.
     let myRegs: Record<string, RegistrationStatus> = {};
@@ -75,7 +86,10 @@ export async function GET(request: Request) {
       })
     );
 
-    return NextResponse.json({ events: data });
+    return NextResponse.json({
+      events: data,
+      pagination: paginationMeta(total, page, limit),
+    });
   } catch (error) {
     return handleApiError(error);
   }
@@ -84,6 +98,7 @@ export async function GET(request: Request) {
 // POST /api/events — buat acara baru (ORGANIZER / ADMIN).
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const user = await requireRole("ORGANIZER", "ADMIN");
     const body = await request.json();
     const data = eventSchema.parse(body);
@@ -95,11 +110,11 @@ export async function POST(request: Request) {
       : [];
 
     const event = await Event.create({
-      title: data.title,
-      description: data.description || undefined,
+      title: sanitizeText(data.title) ?? data.title,
+      description: sanitizeMultiline(data.description),
       date: new Date(data.date),
       endDate: data.endDate ? new Date(data.endDate) : undefined,
-      location: data.location,
+      location: sanitizeText(data.location) ?? data.location,
       locationUrl: data.locationUrl || undefined,
       organizer: user.id,
       capacity: data.capacity === "" || data.capacity == null ? null : Number(data.capacity),

@@ -1,9 +1,10 @@
 "use client";
 
+import { cloneElement, isValidElement, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,31 @@ export function EventForm({ event }: { event?: EventDTO }) {
   });
 
   const status = watch("status");
+  const imageUrl = watch("imageUrl");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      // Note: don't set Content-Type — the browser adds the multipart boundary.
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? "Upload failed");
+      setValue("imageUrl", data.url, { shouldValidate: true });
+      toast.success("Image uploaded");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   function onSubmit(values: EventInput) {
     const mutation = isEdit ? update : create;
@@ -117,8 +143,51 @@ export function EventForm({ event }: { event?: EventDTO }) {
             </Field>
           </div>
 
-          <Field label="Cover Image URL (optional)" error={errors.imageUrl?.message}>
-            <Input placeholder="https://…/cover.jpg" {...register("imageUrl")} />
+          <Field label="Cover Image (optional)" error={errors.imageUrl?.message}>
+            <div className="space-y-3">
+              {imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imageUrl}
+                  alt="Cover preview"
+                  className="aspect-[16/9] w-full rounded-lg border border-border object-cover"
+                />
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploading}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  {uploading ? "Uploading…" : "Upload image"}
+                </Button>
+                {imageUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setValue("imageUrl", "")}
+                  >
+                    Remove
+                  </Button>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleFile}
+                />
+              </div>
+              <Input placeholder="…or paste an image URL" {...register("imageUrl")} />
+            </div>
           </Field>
 
           <div className="grid gap-5 sm:grid-cols-2">
@@ -175,11 +244,27 @@ function Field({
   error?: string;
   children: React.ReactNode;
 }) {
+  const reactId = useId();
+  const errorId = `${reactId}-error`;
+
+  // Associate the error message with the control for screen readers.
+  const control =
+    isValidElement(children) && error
+      ? cloneElement(children as React.ReactElement, {
+          "aria-invalid": true,
+          "aria-describedby": errorId,
+        })
+      : children;
+
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {control}
+      {error && (
+        <p id={errorId} role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

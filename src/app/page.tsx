@@ -19,7 +19,7 @@ export default async function HomePage() {
     <div className="flex min-h-screen flex-col">
       <Navbar />
 
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {/* Stacked reveal: each section is a sticky layer that shrinks and
             fades out as the next, higher z-index layer rises up to cover it. */}
         <HomeHero />

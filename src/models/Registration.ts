@@ -8,6 +8,7 @@ export interface IRegistration {
   status: RegistrationStatus;
   notes?: string;
   calendarAdded: boolean;
+  calendarEventId?: string;
   registeredAt: Date;
   updatedAt: Date;
 }
@@ -31,6 +32,8 @@ const RegistrationSchema = new Schema<IRegistration>(
     },
     notes: { type: String, trim: true },
     calendarAdded: { type: Boolean, default: false },
+    // Google Calendar event id, stored so the event can be removed on cancel.
+    calendarEventId: { type: String },
     registeredAt: { type: Date, default: Date.now },
   },
   { timestamps: { createdAt: "registeredAt", updatedAt: "updatedAt" } }

@@ -45,7 +45,9 @@ export function AdminEventsView() {
   const { data: events, isLoading } = useQuery({
     queryKey: ["events", { admin: true, status }],
     queryFn: () =>
-      apiGet<{ events: EventDTO[] }>(`/api/events?status=${status}&scope=all`),
+      apiGet<{ events: EventDTO[] }>(
+        `/api/events?status=${status}&scope=all&limit=50`
+      ),
     select: (d) => d.events,
   });
 
@@ -124,7 +126,12 @@ export function AdminEventsView() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" asChild>
+                      <Button variant="ghost" size="icon" asChild title="Manage registrations">
+                        <Link href={`/events/${event.id}/manage`}>
+                          <Users className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" size="icon" asChild title="Edit event">
                         <Link href={`/events/${event.id}/edit`}>
                           <Pencil className="h-4 w-4" />
                         </Link>

@@ -6,6 +6,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { assertRateLimit } from "@/lib/rate-limit";
 import type { Role } from "@/types";
 
 const GOOGLE_SCOPES = [
@@ -69,8 +70,16 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        // Throttle login attempts per IP to resist brute-force / credential stuffing.
+        const ip =
+          req?.headers?.["x-forwarded-for"]?.split(",")[0]?.trim() ??
+          req?.headers?.["x-real-ip"] ??
+          "unknown";
+        assertRateLimit(`login:${ip}`, { limit: 10, windowMs: 60_000 });
+
         await connectDB();
 
         const user = await User.findOne({

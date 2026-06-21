@@ -29,7 +29,7 @@ export default async function EditEventPage({
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="container flex-1 py-10">
+      <main id="main-content" className="container flex-1 py-10">
         <div className="mx-auto max-w-2xl">
           <Breadcrumbs
             className="mb-6"

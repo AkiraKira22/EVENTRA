@@ -62,6 +62,30 @@ export interface RegistrationDTO {
   user?: PublicUser;
 }
 
+/** A single attendee row for the organizer's registration-management view. */
+export interface EventRegistrationDTO {
+  id: string;
+  status: RegistrationStatus;
+  notes?: string;
+  registeredAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    image?: string;
+    role: Role;
+  } | null;
+}
+
+/** Pagination metadata returned alongside list endpoints. */
+export interface Pagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
 export interface EventFilters {
   search?: string;
   tag?: string;

@@ -1,23 +1,36 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/fetcher";
 import { buildQueryString } from "@/lib/utils";
-import type { EventDTO, EventFilters } from "@/types";
+import type { EventDTO, EventFilters, Pagination } from "@/types";
 
-export function useEvents(filters: EventFilters = {}) {
-  const qs = buildQueryString({
-    search: filters.search,
-    tag: filters.tag,
-    scope: filters.scope,
-    status: filters.status,
-    organizer: filters.organizer,
-  });
+type EventsPage = { events: EventDTO[]; pagination: Pagination };
 
-  return useQuery({
-    queryKey: ["events", filters],
-    queryFn: () => apiGet<{ events: EventDTO[] }>(`/api/events${qs}`),
-    select: (d) => d.events,
+/** Paginated "load more" event list, used by the public browse page. */
+export function useInfiniteEvents(filters: EventFilters = {}) {
+  return useInfiniteQuery({
+    queryKey: ["events", "infinite", filters],
+    queryFn: ({ pageParam }) =>
+      apiGet<EventsPage>(
+        `/api/events${buildQueryString({
+          search: filters.search,
+          tag: filters.tag,
+          scope: filters.scope,
+          status: filters.status,
+          organizer: filters.organizer,
+          page: pageParam,
+          limit: 12,
+        })}`
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (last) =>
+      last.pagination.hasMore ? last.pagination.page + 1 : undefined,
   });
 }
 

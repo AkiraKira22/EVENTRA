@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Event } from "@/models/Event";
 import { Registration } from "@/models/Registration";
-import { requireUser } from "@/lib/auth";
+import { getSession, requireUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-error";
 import { registerForEventSchema } from "@/lib/validations";
+import { assertSameOrigin } from "@/lib/http";
+import { sanitizeMultiline } from "@/lib/sanitize";
+import { sendRegistrationEmail } from "@/lib/email";
+import { promoteFromWaitlist } from "@/lib/registrations";
+import { removeEventFromCalendar } from "@/lib/google-calendar";
 import type { RegistrationStatus } from "@/types";
 
 type Params = { params: { eventId: string } };
@@ -12,6 +17,7 @@ type Params = { params: { eventId: string } };
 // POST /api/events/[eventId]/register — register for an event.
 export async function POST(request: Request, { params }: Params) {
   try {
+    assertSameOrigin(request);
     const user = await requireUser();
     await connectDB();
 
@@ -45,7 +51,8 @@ export async function POST(request: Request, { params }: Params) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { notes } = registerForEventSchema.parse(body ?? {});
+    const parsed = registerForEventSchema.parse(body ?? {});
+    const notes = sanitizeMultiline(parsed.notes);
 
     // Determine status: full → WAITLISTED, needs approval → PENDING, otherwise → CONFIRMED.
     const isFull =
@@ -59,6 +66,7 @@ export async function POST(request: Request, { params }: Params) {
       existing.status = status;
       existing.notes = notes;
       existing.calendarAdded = false;
+      existing.calendarEventId = undefined;
       await existing.save();
     } else {
       await Registration.create({
@@ -73,6 +81,16 @@ export async function POST(request: Request, { params }: Params) {
     if (status !== "WAITLISTED") {
       event.registrationCount += 1;
       await event.save();
+    }
+
+    // Fire the appropriate confirmation email (no-op if SMTP unconfigured).
+    if (user.email) {
+      await sendRegistrationEmail({
+        to: user.email,
+        name: user.name,
+        event: { id: event._id.toString(), title: event.title, date: event.date },
+        status,
+      });
     }
 
     return NextResponse.json(
@@ -93,8 +111,9 @@ export async function POST(request: Request, { params }: Params) {
 }
 
 // DELETE /api/events/[eventId]/register — cancel your own registration.
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
   try {
+    assertSameOrigin(request);
     const user = await requireUser();
     await connectDB();
 
@@ -109,14 +128,32 @@ export async function DELETE(_request: Request, { params }: Params) {
       );
     }
 
+    // Best-effort: pull the event from the user's Google Calendar if it's there.
+    if (reg.calendarAdded && reg.calendarEventId) {
+      const session = await getSession();
+      if (session?.accessToken) {
+        try {
+          await removeEventFromCalendar(session.accessToken, reg.calendarEventId);
+        } catch (e) {
+          console.error("[cancel] calendar removal failed", e);
+        }
+      }
+    }
+
     const tookSlot = reg.status !== "WAITLISTED";
     reg.status = "CANCELLED";
+    reg.calendarAdded = false;
+    reg.calendarEventId = undefined;
     await reg.save();
 
     if (tookSlot) {
-      await Event.findByIdAndUpdate(params.eventId, {
-        $inc: { registrationCount: -1 },
-      });
+      const event = await Event.findById(params.eventId);
+      if (event) {
+        event.registrationCount = Math.max(0, event.registrationCount - 1);
+        await event.save();
+        // A slot opened up — promote the next person off the waitlist.
+        await promoteFromWaitlist(event);
+      }
     }
 
     return NextResponse.json({ message: "Registration cancelled" });

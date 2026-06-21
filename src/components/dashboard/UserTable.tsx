@@ -36,7 +36,7 @@ export function UserTable() {
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
-    queryFn: () => apiGet<{ users: PublicUser[] }>("/api/users"),
+    queryFn: () => apiGet<{ users: PublicUser[] }>("/api/users?limit=100"),
     select: (d) => d.users,
   });
 

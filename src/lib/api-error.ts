@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { AuthError } from "@/lib/auth";
+import { RateLimitError } from "@/lib/rate-limit";
+import { CsrfError } from "@/lib/http";
 
 /**
  * Turn any error into a consistent JSON response.
@@ -9,6 +11,20 @@ import { AuthError } from "@/lib/auth";
 export function handleApiError(error: unknown): NextResponse {
   if (error instanceof AuthError) {
     return NextResponse.json({ error: error.message }, { status: error.status });
+  }
+
+  if (error instanceof RateLimitError) {
+    return NextResponse.json(
+      { error: error.message },
+      {
+        status: 429,
+        headers: { "Retry-After": String(error.retryAfterSeconds) },
+      }
+    );
+  }
+
+  if (error instanceof CsrfError) {
+    return NextResponse.json({ error: error.message }, { status: 403 });
   }
 
   if (error instanceof ZodError) {

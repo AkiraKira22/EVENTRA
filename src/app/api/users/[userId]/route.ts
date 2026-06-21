@@ -5,6 +5,7 @@ import { User } from "@/models/User";
 import { requireRole } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-error";
 import { serializeUser } from "@/lib/serialize";
+import { assertSameOrigin } from "@/lib/http";
 
 type Params = { params: { userId: string } };
 
@@ -16,6 +17,7 @@ const patchSchema = z.object({
 // PATCH /api/users/[userId] — change role or active status (ADMIN only).
 export async function PATCH(request: Request, { params }: Params) {
   try {
+    assertSameOrigin(request);
     const admin = await requireRole("ADMIN");
     await connectDB();
 

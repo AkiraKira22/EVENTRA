@@ -20,7 +20,9 @@ import {
 } from "@/components/ui/avatar";
 import { RegisterButton } from "@/components/events/RegisterButton";
 import { EventStatusBadge } from "@/components/shared/EventStatusBadge";
+import { Button } from "@/components/ui/button";
 import { getEventById } from "@/lib/events-data";
+import { getSession } from "@/lib/auth";
 import { formatEventDate, getInitials } from "@/lib/utils";
 
 export async function generateMetadata({
@@ -29,7 +31,31 @@ export async function generateMetadata({
   params: { eventId: string };
 }): Promise<Metadata> {
   const event = await getEventById(params.eventId);
-  return { title: event?.title ?? "Event" };
+  if (!event) return { title: "Event not found" };
+
+  const description = event.description
+    ? event.description.replace(/\s+/g, " ").slice(0, 160)
+    : `${event.title} — register on Eventra.`;
+  const url = `/events/${event.id}`;
+
+  return {
+    title: event.title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title: event.title,
+      description,
+      url,
+      images: event.imageUrl ? [{ url: event.imageUrl }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: event.title,
+      description,
+      images: event.imageUrl ? [event.imageUrl] : undefined,
+    },
+  };
 }
 
 export default async function EventDetailPage({
@@ -40,6 +66,11 @@ export default async function EventDetailPage({
   const event = await getEventById(params.eventId);
   if (!event) notFound();
 
+  const session = await getSession();
+  const canManage =
+    !!session?.user &&
+    (event.organizer.id === session.user.id || session.user.role === "ADMIN");
+
   const spotsLeft =
     event.capacity != null ? event.capacity - event.registrationCount : null;
 
@@ -47,7 +78,7 @@ export default async function EventDetailPage({
     <div className="flex min-h-screen flex-col">
       <Navbar />
 
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {/* Cover */}
         <div className="relative h-64 w-full overflow-hidden bg-gradient-to-br from-primary/20 via-card to-secondary sm:h-80">
           {event.imageUrl ? (
@@ -161,6 +192,15 @@ export default async function EventDetailPage({
                   </div>
 
                   <RegisterButton event={event} />
+
+                  {canManage && (
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href={`/events/${event.id}/manage`}>
+                        <Users className="h-4 w-4" />
+                        Manage registrations
+                      </Link>
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             </div>

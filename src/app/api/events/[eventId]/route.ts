@@ -6,6 +6,8 @@ import { eventSchema } from "@/lib/validations";
 import { requireUser, getSession, AuthError } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-error";
 import { serializeEvent } from "@/lib/serialize";
+import { assertSameOrigin } from "@/lib/http";
+import { sanitizeText, sanitizeMultiline } from "@/lib/sanitize";
 
 type Params = { params: { eventId: string } };
 
@@ -44,6 +46,7 @@ export async function GET(_request: Request, { params }: Params) {
 // PATCH /api/events/[eventId] — edit an event (owner or ADMIN).
 export async function PATCH(request: Request, { params }: Params) {
   try {
+    assertSameOrigin(request);
     const user = await requireUser();
     await connectDB();
 
@@ -60,12 +63,13 @@ export async function PATCH(request: Request, { params }: Params) {
     const body = await request.json();
     const data = eventSchema.partial().parse(body);
 
-    if (data.title !== undefined) event.title = data.title;
-    if (data.description !== undefined) event.description = data.description || undefined;
+    if (data.title !== undefined) event.title = sanitizeText(data.title) ?? data.title;
+    if (data.description !== undefined)
+      event.description = sanitizeMultiline(data.description);
     if (data.date) event.date = new Date(data.date);
     if (data.endDate !== undefined)
       event.endDate = data.endDate ? new Date(data.endDate) : undefined;
-    if (data.location) event.location = data.location;
+    if (data.location) event.location = sanitizeText(data.location) ?? data.location;
     if (data.locationUrl !== undefined) event.locationUrl = data.locationUrl || undefined;
     if (data.capacity !== undefined)
       event.capacity =
@@ -91,8 +95,9 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 // DELETE /api/events/[eventId] — delete an event (owner or ADMIN).
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
   try {
+    assertSameOrigin(request);
     const user = await requireUser();
     await connectDB();
 

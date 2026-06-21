@@ -5,10 +5,20 @@ import { User } from "@/models/User";
 import { registerSchema } from "@/lib/validations";
 import { handleApiError } from "@/lib/api-error";
 import { serializeUser } from "@/lib/serialize";
+import { assertRateLimit, getClientIp } from "@/lib/rate-limit";
+import { assertSameOrigin } from "@/lib/http";
+import { sanitizeText } from "@/lib/sanitize";
 
 // POST /api/auth/register — create a new account with email + password.
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
+    // Throttle signups per IP to curb automated account creation.
+    assertRateLimit(`register:${getClientIp(request.headers)}`, {
+      limit: 5,
+      windowMs: 60_000,
+    });
+
     const body = await request.json();
     const data = registerSchema.parse(body);
 
@@ -25,7 +35,7 @@ export async function POST(request: Request) {
     const hashed = await bcrypt.hash(data.password, 12);
 
     const user = await User.create({
-      name: data.name,
+      name: sanitizeText(data.name) ?? data.name,
       email: data.email.toLowerCase(),
       phone: data.phone || undefined,
       password: hashed,

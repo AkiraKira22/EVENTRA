@@ -59,25 +59,53 @@ export function RegisterForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">Full Name</Label>
-        <Input id="name" placeholder="Your name" {...register("name")} />
+        <Input
+          id="name"
+          placeholder="Your name"
+          autoComplete="name"
+          aria-invalid={!!errors.name}
+          aria-describedby={errors.name ? "name-error" : undefined}
+          {...register("name")}
+        />
         {errors.name && (
-          <p className="text-xs text-destructive">{errors.name.message}</p>
+          <p id="name-error" role="alert" className="text-xs text-destructive">
+            {errors.name.message}
+          </p>
         )}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" placeholder="you@email.com" {...register("email")} />
+        <Input
+          id="email"
+          type="email"
+          placeholder="you@email.com"
+          autoComplete="email"
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? "email-error" : undefined}
+          {...register("email")}
+        />
         {errors.email && (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
+          <p id="email-error" role="alert" className="text-xs text-destructive">
+            {errors.email.message}
+          </p>
         )}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="phone">Phone (optional)</Label>
-        <Input id="phone" placeholder="+1 555 000 0000" {...register("phone")} />
+        <Input
+          id="phone"
+          placeholder="+1 555 000 0000"
+          autoComplete="tel"
+          aria-invalid={!!errors.phone}
+          aria-describedby={errors.phone ? "phone-error" : undefined}
+          {...register("phone")}
+        />
         {errors.phone && (
-          <p className="text-xs text-destructive">{errors.phone.message}</p>
+          <p id="phone-error" role="alert" className="text-xs text-destructive">
+            {errors.phone.message}
+          </p>
         )}
       </div>
 
@@ -88,10 +116,19 @@ export function RegisterForm() {
             id="password"
             type="password"
             placeholder="Min. 8 characters"
+            autoComplete="new-password"
+            aria-invalid={!!errors.password}
+            aria-describedby={errors.password ? "password-error" : undefined}
             {...register("password")}
           />
           {errors.password && (
-            <p className="text-xs text-destructive">{errors.password.message}</p>
+            <p
+              id="password-error"
+              role="alert"
+              className="text-xs text-destructive"
+            >
+              {errors.password.message}
+            </p>
           )}
         </div>
         <div className="space-y-2">
@@ -100,10 +137,19 @@ export function RegisterForm() {
             id="confirmPassword"
             type="password"
             placeholder="Repeat password"
+            autoComplete="new-password"
+            aria-invalid={!!errors.confirmPassword}
+            aria-describedby={
+              errors.confirmPassword ? "confirmPassword-error" : undefined
+            }
             {...register("confirmPassword")}
           />
           {errors.confirmPassword && (
-            <p className="text-xs text-destructive">
+            <p
+              id="confirmPassword-error"
+              role="alert"
+              className="text-xs text-destructive"
+            >
               {errors.confirmPassword.message}
             </p>
           )}

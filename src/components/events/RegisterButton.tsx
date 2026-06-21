@@ -132,19 +132,27 @@ export function RegisterButton({ event }: { event: EventDTO }) {
   }
 
   return (
-    <Button
-      size="lg"
-      className="w-full"
-      onClick={handleRegister}
-      disabled={register.isPending}
-    >
-      {register.isPending ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : event.isFull ? (
-        "Join waitlist"
-      ) : (
-        "Register Now"
+    <div className="space-y-2">
+      {event.isFull && (
+        <p className="text-center text-xs text-muted-foreground">
+          This event is full — join the waitlist and we&apos;ll email you if a
+          spot opens up.
+        </p>
       )}
-    </Button>
+      <Button
+        size="lg"
+        className="w-full"
+        onClick={handleRegister}
+        disabled={register.isPending}
+      >
+        {register.isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : event.isFull ? (
+          "Join waitlist"
+        ) : (
+          "Register Now"
+        )}
+      </Button>
+    </div>
   );
 }

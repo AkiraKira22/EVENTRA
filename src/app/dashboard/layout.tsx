@@ -11,7 +11,7 @@ export default function DashboardLayout({
       <Navbar />
       <div className="container flex flex-1 gap-0">
         <Sidebar />
-        <main className="flex-1 py-8 md:pl-8">{children}</main>
+        <main id="main-content" className="flex-1 py-8 md:pl-8">{children}</main>
       </div>
     </div>
   );
